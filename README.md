@@ -1,3 +1,3 @@
-# PowerShell
+# Scripts
 
 Scripts, Modules etc...
