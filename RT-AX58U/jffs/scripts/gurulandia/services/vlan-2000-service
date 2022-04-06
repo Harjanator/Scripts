@@ -1,0 +1,39 @@
+#!/bin/sh
+
+#Variables
+BASEPORT=eth0
+VLANID=2000
+BRIDGE=brWan
+IP=172.200.200.1
+SCRIPT=`basename "$0"`
+
+# Make sure the script is indeed invoked
+touch /tmp/000-$SCRIPT
+
+# Gurulandia_Wan_Share
+# Delete those interfaces that we want to isolate from br0
+logger -t $SCRIPT "services-start: deleting LAN 4 (eth0) from br0"
+
+brctl delif br0 $BASEPORT
+
+# Create VLAN 2000 to LAN 4 (eth0.v2000)
+logger -t $SCRIPT "services-start: Create VLAN 2000 to LAN 4 (eth0.v2000)"
+vlanctl --mcast --if-create $BASEPORT $VLANID
+vlanctl --if $BASEPORT --rx --tags 1 --filter-vid $VLANID 0 --pop-tag --set-rxif $BASEPORT.v$VLANID --rule-append
+vlanctl --if $BASEPORT --tx --tags 0 --filter-txif $BASEPORT.v$VLANID --push-tag --set-vid $VLANID 0 --rule-append
+vlanctl --if $BASEPORT --set-if-mode-rg
+ifconfig $BASEPORT.v$VLANID up
+
+# Create a new bridge brWan for Gurulandia_Wan_Share interfaces
+logger -t $SCRIPT "services-start: creating brWan with VLAN 2000 LAN 4 (eth0.v2000)"
+brctl addbr $BRIDGE
+brctl stp $BRIDGE on # STP to prevent bridge loops
+brctl addif $BRIDGE $BASEPORT.v$VLANID
+
+# Set up the IPv4 address for br1
+# Here we set the subnet to be 172.200.200.0/24
+logger -t $SCRIPT "services-start: setting up IPv4 address for brWan"
+ifconfig $BRIDGE $IP netmask 255.255.255.0
+ifconfig $BRIDGE allmulti up
+
+logger -t $SCRIPT "services-start: all done"
