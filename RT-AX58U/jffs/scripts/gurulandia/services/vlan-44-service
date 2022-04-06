@@ -1,0 +1,40 @@
+#!/bin/sh
+
+# Variables
+BASEPORT=eth0
+VLANID=44
+BRIDGE=brGuest
+IP=192.168.44.4
+SCRIPT=`basename "$0"`
+
+# Make sure the script is indeed invoked
+touch /tmp/000-$SCRIPT
+
+# VLAN 44 (Guest Network)
+# Delete those interfaces that we want to Guest Network from br0
+logger -t $SCRIPT "services-start: deleting Guest Network 3 (wl0.3,wl1.3) from br0"
+brctl delif br0 wl0.3
+brctl delif br0 wl1.3
+
+# Create VLAN 44 to LAN 1 (eth0.v44)
+logger -t $SCRIPT "services-start: Create VLAN 44 to LAN 4 (eth0.v44)"
+vlanctl --mcast --if-create $BASEPORT $VLANID
+vlanctl --if $BASEPORT --rx --tags 1 --filter-vid $VLANID 0 --pop-tag --set-rxif $BASEPORT.v$VLANID --rule-append
+vlanctl --if $BASEPORT --tx --tags 0 --filter-txif $BASEPORT.v$VLANID --push-tag --set-vid $VLANID 0 --rule-append
+ifconfig $BASEPORT.v$VLANID up
+
+# create new bridge brGuest with VLAN 44 LAN 4 (eth0.v44) and Guest Network 3
+logger -t $SCRIPT "services-start: creating brGuest with VLAN 44 LAN 4 (eth0.v44) and Guest Network 3"
+brctl addbr $BRIDGE
+brctl stp $BRIDGE on
+brctl addif $BRIDGE $BASEPORT.v$VLANID
+brctl addif $BRIDGE wl0.3
+brctl addif $BRIDGE wl1.3
+
+# Set up the IPv4 address for brGuest
+# Here we set the subnet to be 192.168.44.0/24
+logger -t $SCRIPT "services-start: setting up IPv4 address for brGuest"
+ifconfig $BRIDGE $IP netmask 255.255.255.0
+ifconfig $BRIDGE allmulti up
+
+logger -t $SCRIPT "services-start: all done"
