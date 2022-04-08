@@ -25,5 +25,6 @@ logger -t "Running Script" "/jffs/scripts/gurulandia/services/vlan-44-service"
 logger -t "Running Script" "/jffs/scripts/gurulandia/services/vlan-0-service"
 /jffs/scripts/gurulandia/services/vlan-0-service
 
-
+logger -t "Running Script" "/jffs/scripts/gurulandia/services/vlan-4000-service"
+/jffs/scripts/gurulandia/services/vlan-4000-service
 

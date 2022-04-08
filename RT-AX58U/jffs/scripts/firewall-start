@@ -9,3 +9,5 @@ logger -t "Running Script" "/jffs/scripts/gurulandia/firewall/vlan-2000-firewall
 logger -t "Running Script" "/jffs/scripts/gurulandia/firewall/vlan-44-firewall"
 /jffs/scripts/gurulandia/firewall/vlan-44-firewall
 
+logger -t "Running Script" "/jffs/scripts/gurulandia/firewall/vlan-4000-firewall"
+/jffs/scripts/gurulandia/firewall/vlan-4000-firewall

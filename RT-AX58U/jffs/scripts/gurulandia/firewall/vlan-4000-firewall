@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Variables
+BRIDGE=brSync
+SCRIPT=`basename "$0"`
+
+# Make sure the script is indeed invoked
+touch /tmp/000-$SCRIPT
+
+logger -t $SCRIPT "firewall-start: applying INPUT rules for ${BRIDGE}"
+
+# Allow new incoming connections from brSync
+iptables -I INPUT -i $BRIDGE -m state --state NEW -j ACCEPT
+
+# Forbid packets from brSync to be forwarded to other interfaces
+iptables -I FORWARD -i $BRIDGE -j DROP
+
+# But allow packet forwarding inside brGuest
+iptables -I FORWARD -i $BRIDGE -o $BRIDGE -j ACCEPT
+
+# Drop packet forwarding between brGuest and eth4 (WAN)
+iptables -I FORWARD -i $BRIDGE -o $1 -j DROP
+
+logger -t $SCRIPT "firewall-start: all done"
