@@ -180,7 +180,7 @@ network:
   version: 1
   config:
     - type: physical
-      name: ens18
+      name: enp6s18
       subnets:
       - type: static
         address: '${VM_IP}'
@@ -200,7 +200,7 @@ echo -e "${LGREEN}Add vlan ${VM_VLAN_ID} to file ${SNIPPETS_FOLDER}/${VM_ID}-${N
 tee -a "${SNIPPETS_FOLDER}/${VM_ID}-${NETWORK_FILE}" >/dev/null  <<EOF
     - type: vlan
       name: ${VM_VLAN_NAME}
-      vlan_link: ens18
+      vlan_link: enp6s18
       vlan_id: ${VM_VLAN_ID}
       subnets:
       - type: static
