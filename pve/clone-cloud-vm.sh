@@ -97,7 +97,7 @@ function create_vm(){
     if  test "${DATADISK}" -eq 1
     then                
         sudo qm importdisk "${VM_ID}" "${DATADISK_PATH}""${DATADISK_FILE}" "${STORAGE_POOL}"
-        sudo qm set "${VM_ID}" --scsihw virtio-scsi-pci --scsi1 "${STORAGE_POOL}":vm-"${VM_ID}"-disk-1
+        sudo qm set "${VM_ID}" --scsihw virtio-scsi-pci --scsi1 "${STORAGE_POOL}":vm-"${VM_ID}"-disk-2
     fi
     pause;
 }
