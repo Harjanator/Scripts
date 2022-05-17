@@ -28,6 +28,6 @@ iptables -I FORWARD -i $BRIDGE -o $BRIDGE -j ACCEPT
 iptables -I FORWARD -i $BRIDGE -o eth4 -j ACCEPT
 
 # Allow packet forwarding between brWan and tun12 (VPN)
-iptables -I FORWARD -i $BRIDGE -o tun12 -j ACCEPT
+#iptables -I FORWARD -i $BRIDGE -o tun12 -j ACCEPT
 
 logger -t $SCRIPT "firewall-start: all done"
