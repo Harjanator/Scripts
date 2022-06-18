@@ -10,8 +10,9 @@ YELLOW='\033[1;33m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
-STORAGE_POOL="Gurulandia"
+STORAGE_POOL="Shared-LVM"
 TEMPLATE_ID="9999"
+TARGET_NODE=$(hostname)
 DATADISK_PATH="/mnt/pve/Shared/"
 DATADISK_FILE="datadisk.qcow2"
 SNIPPETS_STORAGE_POOL="Shared"
@@ -31,14 +32,15 @@ function show_menu(){
     bgred=`echo "\033[41m"`
     fgred=`echo "\033[31m"`
     printf "\n${menu}******************************************************************${normal}\n"
-    printf "${menu}**${number} 1)${menu} Change VM Template               ${GREEN}(Current is ${TEMPLATE_ID})${menu}        ** ${normal}\n"
-    printf "${menu}**${number} 2)${menu} Change Storage Pool              ${GREEN}(Current is ${STORAGE_POOL})${menu}  **  ${normal}\n"
-    printf "${menu}**${number} 3)${menu} Create VM form Template ${menu}                                  ** ${normal}\n"
-    #printf "${menu}**${number} 4)${menu} Create Cloudinit Files in folder ${LGREEN}${SNIPPETS_FOLDER}${menu} ** ${normal}\n"
-    #printf "${menu}**${number} 5)${menu} Some other commands${normal}\n"
+    printf "${menu}**${number} 1)${menu} Select VM Template               ${GREEN}(Current is ${TEMPLATE_ID})${menu}        ** ${normal}\n"
+    printf "${menu}**${number} 2)${menu} Select Storage Pool              ${GREEN}(Current is ${STORAGE_POOL})${menu}  **  ${normal}\n"
+    printf "${menu}**${number} 3)${menu} Select Target Node               ${GREEN}(Current is ${TARGET_NODE})${menu} **  ${normal}\n"
+    printf "${menu}**${number} 4)${menu} Create VM form Template ${menu}                                  ** ${normal}\n"
+    #printf "${menu}**${number} 5)${menu} Create Cloudinit Files in folder ${LGREEN}${SNIPPETS_FOLDER}${menu} ** ${normal}\n"
+    #printf "${menu}**${number} 6)${menu} Some other commands${normal}\n"
     printf "${menu}******************************************************************${normal}\n"
     printf "Please enter a menu option and enter or ${fgred}x to exit. ${normal}"
-    read opt
+    read -n 1 -r opt
 }
 
 function create_vm(){
@@ -93,7 +95,7 @@ function create_vm(){
         printf "${LGREEN}Datadisk template is ${DATADISK_PATH}${DATADISK_FILE} ${NC}\n"
     fi
     pause;
-    sudo qm clone "${TEMPLATE_ID}" "${VM_ID}" -full -name "${VM_NAME}" -storage "${STORAGE_POOL}"
+    sudo qm clone "${TEMPLATE_ID}" "${VM_ID}" -full -name "${VM_NAME}" -storage "${STORAGE_POOL}" 
     if  test "${DATADISK}" -eq 1
     then                
         sudo qm importdisk "${VM_ID}" "${DATADISK_PATH}""${DATADISK_FILE}" "${STORAGE_POOL}"
@@ -265,34 +267,41 @@ fi
 printf "${NC}"
 clear
 show_menu
-while [ $opt != '' ]
+echo $opt
+while [ $opt != "" ]
     do
-    if [ $opt = '' ]; then
+    if [ $opt = "" ]; then
       exit;
     else
       case $opt in
         1) clear;
-            printf "${LGREEN}Change Template to clone...${NC}${YELLOW}\n";            
-            read -n 4 -r -p "Enter Template ID " NEW_TEMPLATE_ID;
-            printf "${NC}";
+            printf "${LGREEN}Select Template to clone...${NC}${YELLOW}\n";            
+            read -n 4 -r -p "Enter Template ID " NEW_TEMPLATE_ID;            
+            printf "${NC}\n";
             if ! [ -z "${NEW_TEMPLATE_ID}" ]
             then      
                 set +e    
-                sudo qm config ${NEW_TEMPLATE_ID} | grep -q -i "Template"  >/dev/null 2>&1
-                status=$?
-                set -e
-                if test "${status}" -eq 0
+                TID=$(sudo cat /etc/pve/.vmlist | grep "${NEW_TEMPLATE_ID}" | tr -d '":,'| awk '{print $1 }' | sort -n | column -t) #ID
+                if ! [ -z "${TID}" ]
                 then
-	                TEMPLATE_ID="${NEW_TEMPLATE_ID}"  
-                    printf "${GREEN}Given VM ID ${TEMPLATE_ID} is OK ${NC}\n"
+                    sudo qm config ${TID} | grep -q -i "Template"  >/dev/null 2>&1
+                    status=$?
+                    set -e
+                    if test "${status}" -eq 0
+                    then
+                        TEMPLATE_ID="${NEW_TEMPLATE_ID}"  
+                        printf "${GREEN}Given VM ID ${TEMPLATE_ID} is OK ${NC}\n"
+                    else
+                        printf "${RED}Given ID ${NEW_TEMPLATE_ID} is not OK ${NC}\n"
+                    fi   
                 else
-	                printf "${RED}Given ID ${NEW_TEMPLATE_ID} is not OK ${NC}\n"
-                fi   
-            fi            
+                    printf "${RED}Given ID ${NEW_TEMPLATE_ID} is not OK ${NC}\n"
+                fi
+            fi      
             show_menu;
         ;;
         2) clear;            
-            printf "${LGREEN}Change Storage Pool${NC}${BROWN}\n";            
+            printf "${LGREEN}Select Storage Pool${NC}${BROWN}\n";            
             read -r -p "Enter Storage Pool " NEW_STORAGE_POOL;
             printf "${NC}";
             if ! [ -z "${NEW_STORAGE_POOL}" ]
@@ -312,26 +321,46 @@ while [ $opt != '' ]
             show_menu;
         ;;
         3)  clear;            
+            printf "${LGREEN}Select Target Node${NC}${BROWN}\n";            
+            read -r -p "Enter Target Node " NEW_TARGET_NODE;
+            printf "${NC}";
+            if ! [ -z "${NEW_TARGET_NODE}" ]
+            then                
+                set +e                
+                sudo pvesh get /nodes --noborder=1 --noheader=1 | awk '{print $1}' | grep "${NEW_TARGET_NODE}"
+                status=$? # store exit status of pvesh                
+                set -e
+                if  test "${status}" -eq 0
+                then
+                    printf "${GREEN}Target Node is ${TARGET_NODE} is changed to ${NEW_TARGET_NODE}.${NC}\n"
+	                TARGET_NODE="${NEW_TARGET_NODE}"                            
+                else
+                    printf "${RED}Given Target Node ${NEW_TARGET_NODE} is not valid target node${NC}\n"
+                fi                
+            fi        
+            show_menu;
+        ;;
+        4)  clear;            
             create_vm            
             clear;
             create_userfile;   
             create_networkfile;         
-            sudo qm set "${VM_ID}" -cicustom user="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${USER_FILE}",network="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${NETWORK_FILE}" -citype nocloud
+            sudo qm set "${VM_ID}" -cicustom user="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${USER_FILE}",network="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${NETWORK_FILE}" -citype nocloud >/dev/null 
+            sudo qm migrate "${VM_ID}" "${TARGET_NODE}" >/dev/null 
             show_menu;
         ;;
-        4) clear;
+        #5) clear;
             #create_userfile;   
             #create_networkfile;         
             #sudo qm set "${VM_ID}" -cicustom user="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${USER_FILE}",network="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${NETWORK_FILE}" -citype nocloud
             #printf "ssh lmesser@ -p 2010";
-            show_menu;
-        ;;
-        x)exit;
-        ;;
-        \n)exit;
+        #    show_menu;
+        #;;
+        x)  printf "\n"
+            exit;
         ;;
         *)clear;            
-            show_menu;
+          show_menu;
         ;;
       esac
     fi
