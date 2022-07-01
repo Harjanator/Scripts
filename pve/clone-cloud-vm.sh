@@ -277,7 +277,7 @@ while [ $opt != "" ]
         1) clear;
             printf "${LGREEN}Select Template to clone...${NC}${YELLOW}\n";            
             read -n 4 -r -p "Enter Template ID " NEW_TEMPLATE_ID;            
-            printf "${NC}\n";
+            printf "${NC}\nChecking Given ID...\n";
             if ! [ -z "${NEW_TEMPLATE_ID}" ]
             then      
                 set +e    
@@ -327,7 +327,7 @@ while [ $opt != "" ]
             if ! [ -z "${NEW_TARGET_NODE}" ]
             then                
                 set +e                
-                sudo pvesh get /nodes --noborder=1 --noheader=1 | awk '{print $1}' | grep "${NEW_TARGET_NODE}"
+                sudo pvesh get /nodes --noborder=1 --noheader=1 | awk '{print $1}' | grep "${NEW_TARGET_NODE}" >/dev/null 
                 status=$? # store exit status of pvesh                
                 set -e
                 if  test "${status}" -eq 0
@@ -346,7 +346,10 @@ while [ $opt != "" ]
             create_userfile;   
             create_networkfile;         
             sudo qm set "${VM_ID}" -cicustom user="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${USER_FILE}",network="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${NETWORK_FILE}" -citype nocloud >/dev/null 
-            sudo qm migrate "${VM_ID}" "${TARGET_NODE}" >/dev/null 
+            if [ $TARGET_NODE != $(hostname) ]
+            then                
+               sudo qm migrate "${VM_ID}" "${TARGET_NODE}" >/dev/null 
+            fi
             show_menu;
         ;;
         #5) clear;
