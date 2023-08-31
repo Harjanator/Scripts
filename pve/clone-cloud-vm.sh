@@ -20,7 +20,7 @@ SNIPPETS_FOLDER="${DATADISK_PATH}snippets"
 VM_ID=$(sudo pvesh get /cluster/nextid)
 USER_FILE="user.yaml"
 NETWORK_FILE="network.yaml"
-PASSWORD='$5$47YydcdN$MC/TH3x7ztc113w8cBTtw2PpIdqS19gya7pvyqahCQ0'
+PASSWORD='$6$rounds=4096$48OBL38U6yzCN4FY$ZR7qfvaro32ShqGhvKUml5Yy7gemlTHyvuIx7SyMqj3FxVRch9J0KqYwOCHnc1FrDwDIhnCA1nPcdyfD9APhD0'
 
 function pause (){
     read -p "Press any key to resume ..."
@@ -131,15 +131,15 @@ hostname: ${VM_HOSTNAME}
 manage_etc_hosts: true
 fqdn: ${VM_FDQN}
 timezone: "Europe/Helsinki"
-user: gurulandia
-password: ${PASSWORD}
-sudo: "ALL=(ALL) NOPASSWD:ALL"
-ssh_authorized_keys:
-  - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAqdkxDns+s3C6Vjl0BRLxj2YKgNx9aAnqw5QPe3Mm0I7tgBn0qjZ8r4KRweUaJQYtRaxctFRt9y+AaW2MAGDGJsfdTL992QSAZBtsEEt+7vC9QfUYKwzBafZAUZlKAWo17U72JKHmbqZCCUPl6oIYX4AxtWXGFY27Kh4VUb7nSync9l6JOleSRIVWq0/KLAcf8Rvw1JiNU8y1C0c3Yk2l8hzU2gZGIXSP798U/ggzoRFE716132GMxzhlwvQXlVrNR2fI0IPxJrJiAaLLVc6+GueiIez3G4lz1HNRCuVy2NSIy3k55jqYyNR1DYf7/BQNJvuWgbd8T2pPdVfOs5LlOQ== Gurulandia Key
 chpasswd:
   expire: False
 users:
-  - default
+  - name: gurulandia
+    hashed_passwd: ${PASSWORD}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAqdkxDns+s3C6Vjl0BRLxj2YKgNx9aAnqw5QPe3Mm0I7tgBn0qjZ8r4KRweUaJQYtRaxctFRt9y+AaW2MAGDGJsfdTL992QSAZBtsEEt+7vC9QfUYKwzBafZAUZlKAWo17U72JKHmbqZCCUPl6oIYX4AxtWXGFY27Kh4VUb7nSync9l6JOleSRIVWq0/KLAcf8Rvw1JiNU8y1C0c3Yk2l8hzU2gZGIXSP798U/ggzoRFE716132GMxzhlwvQXlVrNR2fI0IPxJrJiAaLLVc6+GueiIez3G4lz1HNRCuVy2NSIy3k55jqYyNR1DYf7/BQNJvuWgbd8T2pPdVfOs5LlOQ== Gurulandia Key
 packages:
  - qemu-guest-agent
  - vlan
@@ -147,6 +147,7 @@ packages:
  - apache2-utils
  - pwgen
  - iftop
+ - lvm2
 package_update: true
 package_upgrade: true
 package_reboot_if_required: true
@@ -348,7 +349,8 @@ while [ $opt != "" ]
             sudo qm set "${VM_ID}" -cicustom user="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${USER_FILE}",network="${SNIPPETS_STORAGE_POOL}":snippets/"${VM_ID}-${NETWORK_FILE}" -citype nocloud >/dev/null 
             if [ $TARGET_NODE != $(hostname) ]
             then                
-               sudo qm migrate "${VM_ID}" "${TARGET_NODE}" >/dev/null 
+               printf "${GREEN}Migrate VM ${VM_ID} to Target Node ${TARGET_NODE}.${NC}\n"
+               sudo qm migrate "${VM_ID}" "${TARGET_NODE}" #>/dev/null 
             fi
             show_menu;
         ;;
